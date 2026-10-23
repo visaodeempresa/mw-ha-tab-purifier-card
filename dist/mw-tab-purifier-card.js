@@ -324,7 +324,8 @@
     const usados = new Set();
     for (const s of BUTTON_SLOTS) {
       const achou = ids.find((id) => !usados.has(id)
-        && id.indexOf(s.domain + ".") === 0 && s.re.test(rotulo(hass, id)))
+        && (id.indexOf(s.domain + ".") === 0 || (s.key === "filter" && id.indexOf("button.") === 0))
+        && s.re.test(rotulo(hass, id)))
         || ids.find((id) => !usados.has(id) && id.indexOf(s.domain + ".") === 0 && s.key === "power");
       if (achou) { out[s.key] = achou; usados.add(achou); }
     }
@@ -333,7 +334,7 @@
 
   /** os dois seletores: nível de velocidade e modo. */
   const guessLevels = (hass, dev) => {
-    const sels = entitiesOfDevice(hass, dev).filter((id) => id.indexOf("select.") === 0);
+    const sels = entitiesOfDevice(hass, dev).filter((id) => id.indexOf("select.") === 0 || id.indexOf("number.") === 0);
     const out = {};
     const usados = new Set();
     for (const s of LEVEL_SLOTS) {
@@ -481,6 +482,15 @@
       };
       if (s.scheme) base.level_scheme = s.scheme;
       if (s.colors) base.level_colors = { ...s.colors };
+      const domain = String(achados[s.key]).split(".")[0];
+      if (domain === "number" || domain === "input_number") {
+        if (s.key === "speed") {
+          base.option_labels = { "0": "0 · Desligado", "1": "1 · Baixo", "2": "2 · Suave", "3": "3 · Médio", "4": "4 · Alto", "5": "5 · Turbo" };
+        } else if (s.key === "mode") {
+          base.option_labels = { "0": "Fresco", "1": "Noturno", "2": "Ausente" };
+          base.level_colors = { "0": "#8fbf8f", "1": "#5b6b9e", "2": "#9a9a9a", ...s.colors };
+        }
+      }
       return deepMerge(deepMerge(base, clean(cfg.level_options || {})),
         (cfg.level_overrides || {})[s.key] || {});
     });
